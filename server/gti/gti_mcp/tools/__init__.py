@@ -17,3 +17,5 @@ from .intelligence import *
 from .netloc import *
 from .threat_profiles import *
 from .urls import *
+from .retrohunt import *
+from .downloads import *

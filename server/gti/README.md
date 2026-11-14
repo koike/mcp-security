@@ -4,6 +4,12 @@ This is an MCP (Model Context Protocol) server for interacting with Google's
 Threat Intelligence suite.
 [MCP Info](https://modelcontextprotocol.io/introduction)
 
+## Research tools in this fork
+
+This branch adds Retrohunt result retrieval and signed download URLs for files
+and password-protected ZIPs. See the [research tool documentation](RESEARCH_TOOLS.md)
+(Japanese) for setup, tool arguments, and usage examples.
+
 ## Features
 
 ### Collections (Threats)
