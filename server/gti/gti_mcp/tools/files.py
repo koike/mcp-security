@@ -248,26 +248,6 @@ async def get_file_behavior_summary(hash: str, ctx: Context) -> typing.Dict[str,
 
 
 @server.tool()
-async def analyse_file(file_path: str, ctx: Context):
-  """Upload and analyse the file in VirusTotal.
-
-  The file will be uploaded to VirusTotal and shared with the community.
-
-  Args:
-    file_path (required): Path to the file for analysis. Use absolute path.
-  Returns:
-    The analysis report.
-  """
-  async with vt_client(ctx) as client:
-    with open(file_path, "rb") as f:    
-      analysis = await client.scan_file_async(file=f)
-      logging.info(f"File {file_path} uploaded.")
-
-    res = await client.wait_for_analysis_completion(analysis)
-    logging.info(f"Analysis has completed with ID %s", res.id)
-    return utils.sanitize_response(res.to_dict())
-
-@server.tool()
 async def search_digital_threat_monitoring(
     query: str,
     ctx: Context,

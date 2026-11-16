@@ -4,6 +4,23 @@
 
 この実装はVT側でパスワード付きZIPを作成し、署名付きURLを返します。検体本体やZIP本体をMCPサーバーに保存したり、MCP経由で転送したりする機能はありません。実ファイルの取得と解析は、呼び出し元の環境で行います。
 
+## 投稿・コレクション更新機能の削除
+
+このブランチでは、次の4ツールを関数本体とMCPの登録から削除しています。
+
+- `analyse_file`
+- `create_collection`
+- `update_collection_attributes`
+- `update_iocs_in_collection`
+
+公開ツールは39件です。削除した名前は`tools/list`に含まれず、名前を直接指定した`tools/call`も`Unknown tool`エラーになります。ファイル投稿やコレクションへの書き込みを行うための代替ツールは追加していません。
+
+Content Search、既存Retrohuntの結果取得、ファイル・URL・ドメイン・IPのレポート取得、Telemetryの投稿履歴、既存コレクションの検索・閲覧、検体のダウンロードURL発行は引き続き利用できます。`get_url_report`は取得エラー時にURL投稿や再解析へ切り替えません。
+
+DTM検索の`POST /dtm/docs/search`と、既存検体のZIP作成の`POST /intelligence/zip_files`も維持しています。ZIP作成はVT側で新しいZIPオブジェクトを作る操作であり、ローカルの検体本体をアップロードする操作ではありません。この変更はHTTPのPOST全般を禁止するものではありません。
+
+検索式や照会する識別子はVTへ送信されます。[検索APIの公式ドキュメント](https://docs.virustotal.com/reference/intelligence-search)には、APIで投稿または照会したIoCのスキャン・データセットへの追加に関する注意書きがあります。今回の削除はMCP側の投稿・更新処理を取り除くもので、VT側が照会IoCを登録・スキャンしないことを保証するものではありません。
+
 ## セットアップ
 
 Python 3.11以上、Git、[uv](https://docs.astral.sh/uv/getting-started/installation/)が必要です。ランタイム依存は`pyproject.toml`の`mcp>=1.23.0,<2.0`と`vt-py`を使用します。以下はLinux/macOSのBashで、新しいチェックアウトへ導入する例です。このforkでは`main`を上流に合わせるために保持し、追加機能を`gti-retrohunt-download-tools`ブランチで管理します。
@@ -27,6 +44,24 @@ export VT_APIKEY
 ```
 
 `gti_mcp`はstdioのMCPサーバーとして動作します。MCPクライアントから起動する場合は、この仮想環境内の`gti_mcp`を起動コマンドに指定し、そのプロセスへ`VT_APIKEY`が渡るように設定してください。APIキーをツール引数やソースコードに含める必要はありません。クライアント固有の設定は[既存README](README.md)も参照してください。
+
+### 既存環境の更新
+
+このforkをGitで取得している場合は、リポジトリのルートで対象ブランチを更新します。未コミットの変更がある場合は差分を確認し、作業内容を保持してから実行してください。
+
+```bash
+git switch gti-retrohunt-download-tools
+git pull --ff-only origin gti-retrohunt-download-tools
+```
+
+上記のセットアップ例と同じ仮想環境を使っている場合は、続いてパッケージを更新します。
+
+```bash
+cd server/gti
+uv pip install --python .venv/bin/python -e .
+```
+
+別の仮想環境で運用している場合は、そのPythonとチェックアウトを指定してください。更新後は、稼働中のMCPサーバープロセスを現在の起動方法で再起動します。クライアント側でツール一覧を再取得し、39件であることと、削除した4ツールが含まれないことを確認してください。ソースの更新だけでは既に起動済みのプロセスに残る登録は変わりません。
 
 ## 追加した7ツール
 
@@ -127,21 +162,22 @@ uv pip install --python .venv/bin/python -e '.[test]'
 .venv/bin/python -m pytest -q tests
 ```
 
-開発時の確認結果は次のとおりです。
+4ツール削除後の確認結果は次のとおりです。
 
 | 対象 | 環境 | 結果 |
 | --- | --- | --- |
-| 上流の既存テスト | 追加前の基準コード | 79件成功 |
-| 既存79件＋追加107件 | Python 3.12.14、MCP SDK 1.29.0、vt-py 0.22.0 | 186件成功 |
-| 追加テスト | Python 3.12.14、MCP SDK 1.23.0、vt-py 0.22.0 | 107件成功 |
-| stdioの実プロセス接続 | MCP SDK 1.29.0 / 1.23.0 | 43ツールを発見。追加7ツールと既存`search_iocs`を確認 |
+| 全テスト | Python 3.12.14、MCP SDK 1.29.0、vt-py 0.22.0 | 180件成功 |
+| MCPプロトコルの回帰テスト | Python 3.12.14、MCP SDK 1.23.0、vt-py 0.22.0 | 10件成功 |
+| stdioの実プロセス接続 | MCP SDK 1.29.0、実APIキーなし | 39ツールを確認。削除した4ツールの呼び出しは`Unknown tool` |
 
-SDK下限で追加テストを再確認する場合は、別の仮想環境を使えます。
+削除対象の旧テスト13件を除き、新しい回帰テスト7件を追加しました。ツール一覧が残る39件と一致すること、削除した4名を指定してもVTクライアントを生成せず拒否すること、URL取得が404でも投稿へ切り替えないこと、Content Searchの結果を取得できることを確認しています。
+
+SDK下限でMCPプロトコルの回帰テストを確認する場合は、別の仮想環境を使えます。
 
 ```bash
 uv venv --python 3.12 .venv-mcp123
 uv pip install --python .venv-mcp123/bin/python -e '.[test]' 'mcp==1.23.0' 'vt-py==0.22.0'
-.venv-mcp123/bin/python -m pytest -q tests/test_retrohunt.py tests/test_downloads.py tests/test_research_mcp.py
+.venv-mcp123/bin/python -m pytest -q tests/test_research_mcp.py tests/test_tool_removal.py
 ```
 
 APIペイロード、ページ送り、一致コンテキスト、入力検証、APIエラー、ZIPの状態遷移、MCPの登録・応答を確認しています。これらの自動テストとは別に、利用する実アカウントの権限と、呼び出し元からのファイル取得可否を確認してください。

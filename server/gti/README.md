@@ -10,6 +10,14 @@ This branch adds Retrohunt result retrieval and signed download URLs for files
 and password-protected ZIPs. See the [research tool documentation](RESEARCH_TOOLS.md)
 (Japanese) for setup, tool arguments, and usage examples.
 
+This fork exposes 39 tools. The file upload tool `analyse_file` and the collection
+write tools `create_collection`, `update_collection_attributes`, and
+`update_iocs_in_collection` have been removed from the implementation and MCP
+registration. Content Search, existing Retrohunt results, report retrieval, and
+sample download URLs remain available. DTM searches and ZIP creation still use
+POST requests. See [the scope of this change](RESEARCH_TOOLS.md)
+for details about queries sent to VirusTotal.
+
 ## Features
 
 ### Collections (Threats)
