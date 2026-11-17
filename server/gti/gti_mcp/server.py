@@ -21,6 +21,7 @@ import os
 import vt
 
 from mcp.server.fastmcp import FastMCP, Context
+from mcp.server.fastmcp.server import Settings as FastMCPSettings
 
 logging.basicConfig(level=logging.ERROR)
 
@@ -51,6 +52,9 @@ async def vt_client(ctx: Context) -> AsyncIterator[vt.Client]:
     await client.close_async()
 
 # Create a named server and specify dependencies for deployment and development
+# MCP 1.x leaves Settings.lifespan unresolved until FastMCP has been defined.
+# Resolve it before pydantic-settings reads the configuration (python-sdk #3294).
+FastMCPSettings.model_rebuild()
 server = FastMCP(
     "Google Threat Intelligence MCP server",
     dependencies=["vt-py"],

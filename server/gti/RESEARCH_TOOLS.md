@@ -153,6 +153,14 @@ URLが発行されても、呼び出し元へ検体が到着したとは限り�
 
 取得できたraw検体はSHA-256を照合します。ZIPではアーカイブ自体のハッシュと検体のハッシュを区別し、展開した各検体を要求したSHA-256一覧と照合してください。その後、検体を実行せずにファイル形式、文字列、ヘッダー、インポート、スクリプト内容などの静的解析を行います。署名URLと`zip_password`は一時的な取得・展開権限として扱い、公開リポジトリや調査に不要な共有先へ含めないでください。
 
+## 起動時の警告
+
+MCP SDK 1.xと`pydantic-settings>=2.15`の組み合わせでは、`lifespan`の型参照が未解決であることを示す`IncompleteFieldDefinitionWarning`が出る場合があります。このブランチではFastMCPの生成前に`Settings.model_rebuild()`を呼び、設定の読み込み前に型参照を解決しています。[MCP SDKの既知の問題と回避策](https://github.com/modelcontextprotocol/python-sdk/issues/3294)
+
+DTM検索の説明文に含まれるバックスラッシュはraw文字列で記述し、Python 3.12の`SyntaxWarning: invalid escape sequence`を解消しています。ツールへ公開する説明文の内容は変更していません。
+
+古いコードでこれらの警告が表示されても、続いてツール一覧が39件取得できていれば、その一覧確認は成功しています。警告を一括で非表示にする設定は不要です。Gitでソースを更新した後、起動済みのMCPプロセスを再起動してください。
+
 ## テスト
 
 `server/gti`でテスト用依存を導入し、実行します。テストはモックとローカルHTTPサーバーを使用し、実APIキーや実検体を必要としません。
@@ -166,18 +174,20 @@ uv pip install --python .venv/bin/python -e '.[test]'
 
 | 対象 | 環境 | 結果 |
 | --- | --- | --- |
-| 全テスト | Python 3.12.14、MCP SDK 1.29.0、vt-py 0.22.0 | 180件成功 |
-| MCPプロトコルの回帰テスト | Python 3.12.14、MCP SDK 1.23.0、vt-py 0.22.0 | 10件成功 |
+| 全テスト | Python 3.12.14、MCP SDK 1.29.0、vt-py 0.22.0 | 181件成功 |
+| MCPプロトコルと初回起動の回帰テスト | Python 3.12.14、MCP SDK 1.23.0、vt-py 0.22.0 | 11件成功 |
 | stdioの実プロセス接続 | MCP SDK 1.29.0、実APIキーなし | 39ツールを確認。削除した4ツールの呼び出しは`Unknown tool` |
 
 削除対象の旧テスト13件を除き、新しい回帰テスト7件を追加しました。ツール一覧が残る39件と一致すること、削除した4名を指定してもVTクライアントを生成せず拒否すること、URL取得が404でも投稿へ切り替えないこと、Content Searchの結果を取得できることを確認しています。
 
-SDK下限でMCPプロトコルの回帰テストを確認する場合は、別の仮想環境を使えます。
+さらに初回起動の回帰テスト1件を追加し、別のPythonプロセスと新しいバイトコードキャッシュを使って、今回の2種類の警告をエラー扱いにしても39件のツールを取得できることを確認しています。初回起動の確認ではVTクライアントを生成しません。
+
+SDK下限でMCPプロトコルと初回起動の回帰テストを確認する場合は、別の仮想環境を使えます。
 
 ```bash
 uv venv --python 3.12 .venv-mcp123
 uv pip install --python .venv-mcp123/bin/python -e '.[test]' 'mcp==1.23.0' 'vt-py==0.22.0'
-.venv-mcp123/bin/python -m pytest -q tests/test_research_mcp.py tests/test_tool_removal.py
+.venv-mcp123/bin/python -m pytest -q tests/test_research_mcp.py tests/test_tool_removal.py tests/test_startup.py
 ```
 
 APIペイロード、ページ送り、一致コンテキスト、入力検証、APIエラー、ZIPの状態遷移、MCPの登録・応答を確認しています。これらの自動テストとは別に、利用する実アカウントの権限と、呼び出し元からのファイル取得可否を確認してください。
